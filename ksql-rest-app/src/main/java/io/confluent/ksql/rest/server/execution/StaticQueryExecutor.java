@@ -157,49 +157,58 @@ public final class StaticQueryExecutor {
 
       final Struct rowKey = asKeyStruct(whereInfo.rowkey, query.getPhysicalSchema());
 
-      final KsqlNode owner = getOwner(rowKey, mat);
-      if (!owner.isLocal()) {
-        return Optional.of(proxyTo(owner, statement, serviceContext));
+      final List<KsqlNode> owners = getOwners(rowKey, mat);
+      for (KsqlNode owner : owners) {
+        if (!owner.isLocal()) {
+          // TODO: This can't be blocking like this.
+          try {
+            return Optional.of(proxyTo(owner, statement, serviceContext));
+          } catch (KsqlServerException kse) {
+            System.err.println("Proxying to node failed : " + owner.toString());
+            mat.locator().reportFailure(owner);
+          }
+        } else {
+          final Result result;
+          if (whereInfo.windowStartBounds.isPresent()) {
+            final Range<Instant> windowStart = whereInfo.windowStartBounds.get();
+
+            final List<? extends TableRow> rows = mat.windowed()
+                .get(rowKey, windowStart);
+
+            result = new Result(mat.schema(), rows);
+          } else {
+            final List<? extends TableRow> rows = mat.nonWindowed()
+                .get(rowKey)
+                .map(ImmutableList::of)
+                .orElse(ImmutableList.of());
+
+            result = new Result(mat.schema(), rows);
+          }
+
+          final LogicalSchema outputSchema;
+          final List<List<?>> rows;
+          if (isSelectStar(statement.getStatement().getSelect())) {
+            outputSchema = TableRowsEntityFactory.buildSchema(result.schema, mat.windowType());
+            rows = TableRowsEntityFactory.createRows(result.rows);
+          } else {
+            final LogicalSchema.Builder schemaBuilder =
+                selectSchemaBuilder(result, executionContext, analysis);
+
+            outputSchema = schemaBuilder.build();
+
+            rows = handleSelects(result, statement, executionContext, analysis, outputSchema);
+          }
+
+          final TableRowsEntity entity = new TableRowsEntity(
+              statement.getStatementText(),
+              outputSchema,
+              rows
+          );
+
+          return Optional.of(entity);
+        }
       }
-
-      final Result result;
-      if (whereInfo.windowStartBounds.isPresent()) {
-        final Range<Instant> windowStart = whereInfo.windowStartBounds.get();
-
-        final List<? extends TableRow> rows = mat.windowed()
-            .get(rowKey, windowStart);
-
-        result = new Result(mat.schema(), rows);
-      } else {
-        final List<? extends TableRow> rows = mat.nonWindowed()
-            .get(rowKey)
-            .map(ImmutableList::of)
-            .orElse(ImmutableList.of());
-
-        result = new Result(mat.schema(), rows);
-      }
-
-      final LogicalSchema outputSchema;
-      final List<List<?>> rows;
-      if (isSelectStar(statement.getStatement().getSelect())) {
-        outputSchema = TableRowsEntityFactory.buildSchema(result.schema, mat.windowType());
-        rows = TableRowsEntityFactory.createRows(result.rows);
-      } else {
-        final LogicalSchema.Builder schemaBuilder =
-            selectSchemaBuilder(result, executionContext, analysis);
-
-        outputSchema = schemaBuilder.build();
-
-        rows = handleSelects(result, statement, executionContext, analysis, outputSchema);
-      }
-
-      final TableRowsEntity entity = new TableRowsEntity(
-          statement.getStatementText(),
-          outputSchema,
-          rows
-      );
-
-      return Optional.of(entity);
+      throw new KsqlServerException("All attempts to fetch value failed ");
     } catch (final Exception e) {
       throw new KsqlStatementException(
           e.getMessage() == null ? "Server Error" : e.getMessage(),
@@ -634,14 +643,15 @@ public final class StaticQueryExecutor {
     return source.getName();
   }
 
-  private static KsqlNode getOwner(final Struct rowKey, final Materialization mat) {
+  private static List<KsqlNode> getOwners(final Struct rowKey, final Materialization mat) {
     final Locator locator = mat.locator();
 
     final long threshold = System.currentTimeMillis() + OWNERSHIP_TIMEOUT.toMillis();
     while (System.currentTimeMillis() < threshold) {
-      final Optional<KsqlNode> owner = locator.locate(rowKey);
-      if (owner.isPresent()) {
-        return owner.get();
+      // TODO: distinguish between not being ready and all nodes being down.
+      final List<KsqlNode> owners = locator.locate(rowKey);
+      if (owners.size() > 0) {
+        return owners;
       }
     }
 

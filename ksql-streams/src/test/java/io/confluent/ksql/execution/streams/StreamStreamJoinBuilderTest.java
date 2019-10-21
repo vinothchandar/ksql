@@ -145,9 +145,9 @@ public class StreamStreamJoinBuilderTest {
     );
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "deprecation"})
   private void givenLeftJoin() {
-    when(leftKStream.leftJoin(any(KStream.class), any(), any(), any())).thenReturn(resultKStream);
+    when(leftKStream.leftJoin(any(KStream.class), any(), any(), any(Joined.class))).thenReturn(resultKStream);
     join = new StreamStreamJoin<>(
         new DefaultExecutionStepProperties(SCHEMA, CTX),
         JoinType.LEFT,
@@ -160,9 +160,9 @@ public class StreamStreamJoinBuilderTest {
     );
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "deprecation"})
   private void givenOuterJoin() {
-    when(leftKStream.outerJoin(any(KStream.class), any(), any(), any())).thenReturn(resultKStream);
+    when(leftKStream.outerJoin(any(KStream.class), any(), any(), any(Joined.class))).thenReturn(resultKStream);
     join = new StreamStreamJoin<>(
         new DefaultExecutionStepProperties(SCHEMA, CTX),
         JoinType.OUTER,
@@ -175,9 +175,9 @@ public class StreamStreamJoinBuilderTest {
     );
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "deprecation"})
   private void givenInnerJoin() {
-    when(leftKStream.join(any(KStream.class), any(), any(), any())).thenReturn(resultKStream);
+    when(leftKStream.join(any(KStream.class), any(), any(), any(Joined.class))).thenReturn(resultKStream);
     join = new StreamStreamJoin<>(
         new DefaultExecutionStepProperties(SCHEMA, CTX),
         JoinType.INNER,
@@ -191,6 +191,7 @@ public class StreamStreamJoinBuilderTest {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void shouldDoLeftJoin() {
     // Given:
     givenLeftJoin();
@@ -211,6 +212,7 @@ public class StreamStreamJoinBuilderTest {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void shouldDoOuterJoin() {
     // Given:
     givenOuterJoin();
@@ -231,6 +233,7 @@ public class StreamStreamJoinBuilderTest {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void shouldDoInnerJoin() {
     // Given:
     givenInnerJoin();

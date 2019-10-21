@@ -21,7 +21,9 @@ import com.google.errorprone.annotations.Immutable;
 import io.confluent.ksql.materialization.Locator;
 import java.net.URI;
 import java.net.URL;
-import java.util.Optional;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.streams.KafkaStreams;
@@ -51,16 +53,21 @@ final class KsLocator implements Locator {
   }
 
   @Override
-  public Optional<KsqlNode> locate(final Struct key) {
-    final StreamsMetadata metadata = kafkaStreams
-        .metadataForKey(stateStoreName, key, keySerializer);
+  public List<KsqlNode> locate(final Struct key) {
+    final List<StreamsMetadata> allMetadata = kafkaStreams.allMetadataWithKey(
+        stateStoreName, key, keySerializer);
 
-    if (metadata == StreamsMetadata.NOT_AVAILABLE) {
-      return Optional.empty();
+    if (allMetadata.size() == 1 && allMetadata.get(0) == StreamsMetadata.NOT_AVAILABLE) {
+      return Collections.emptyList();
     }
 
-    final HostInfo hostInfo = metadata.hostInfo();
-    return Optional.of(asNode(hostInfo));
+    return allMetadata.stream().map(metadata -> asNode(metadata.hostInfo()))
+        .collect(Collectors.toList());
+  }
+
+  @Override
+  public void reportFailure(final KsqlNode node) {
+    // TODO: implement failure detection
   }
 
   private KsqlNode asNode(final HostInfo hostInfo) {
@@ -112,6 +119,11 @@ final class KsLocator implements Locator {
     @Override
     public URI location() {
       return location;
+    }
+
+    @Override
+    public String toString() {
+      return String.format("[Node %s, local: %s]", location, local);
     }
   }
 }

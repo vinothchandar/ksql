@@ -868,7 +868,7 @@ public class SchemaKStreamTest {
     assertThat(result.getKeySerde(), is(initialSchemaKStream.getKeySerde()));
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "deprecation"})
   @Test
   public void shouldPerformStreamToStreamLeftJoin() {
     // Given:
@@ -972,7 +972,7 @@ public class SchemaKStreamTest {
     }
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "deprecation"})
   @Test
   public void shouldPerformStreamToStreamInnerJoin() {
     // Given:
@@ -1020,7 +1020,7 @@ public class SchemaKStreamTest {
                  joinedKStream.sourceSchemaKStreams);
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "deprecation"})
   @Test
   public void shouldPerformStreamToStreamOuterJoin() {
     // Given:

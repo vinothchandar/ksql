@@ -86,6 +86,7 @@ public final class TestExecutorUtil {
         .collect(Collectors.toList());
   }
 
+  @SuppressWarnings("deprecation")
   static List<TopologyTestDriverContainer> buildStreamsTopologyTestDrivers(
       final TestCase testCase,
       final ServiceContext serviceContext,

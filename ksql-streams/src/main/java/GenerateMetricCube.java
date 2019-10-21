@@ -48,6 +48,35 @@ public final class GenerateMetricCube {
     return clientProps;
   }
 
+  private void cubeAndProduce(final String cluster, final String topic, final String env,
+      final String metricName, final double metricValue,
+      final KafkaProducer<String, String> producer, final long ts) {
+    for (String clusterValue : new String[] {cluster, null}) {
+      for (String topicValue : new String[] {topic, null}) {
+        for (String envValue : new String[] {env, null}) {
+          final String json = String.format("{"
+                  + " \"metrics_name\" : \"%s\","
+                  + " \"metrics_value\" : %f,"
+                  + " \"dimensions\" : {"
+                  + " \"cluster\" : %s,"
+                  + " \"topic_name\" : %s,"
+                  + " \"env\" : %s"
+                  + "},"
+                  + " \"ts\" : %d"
+                  + "}", metricName, metricValue,
+              clusterValue == null ? null : "\"" + clusterValue + "\"",
+              topicValue == null ? null : "\"" + topicValue + "\"",
+              envValue == null ? null : "\"" + envValue + "\"",
+              ts);
+          System.out.println(json);
+          producer.send(new ProducerRecord<>("metrics",
+              String.format("%s-%s-%s-%d", clusterValue, topicValue, envValue, ts),
+              json));
+        }
+      }
+    }
+  }
+
   private void produceEvents(final double produceSleepIntervalMs) {
     final Properties producerProps = setProduceConsumeProperties("metrics-cube-producer",
         bootstrapServers);
@@ -68,30 +97,7 @@ public final class GenerateMetricCube {
         final String env = ENVS[random.nextInt(ENVS.length)];
 
         // explode into a cube.
-        for (String clusterValue : new String[] {cluster, null}) {
-          for (String topicValue : new String[] {topic, null}) {
-            for (String envValue : new String[] {env, null}) {
-              final String json = String.format("{"
-                  + " \"metrics_name\" : \"%s\","
-                  + " \"metrics_value\" : %f,"
-                  + " \"dimensions\" : {"
-                  + " \"cluster\" : %s,"
-                  + " \"topic_name\" : %s,"
-                  + " \"env\" : %s"
-                  + "},"
-                  + " \"ts\" : %d"
-                  + "}", metricName, metricValue,
-                  clusterValue == null ? null : "\"" + clusterValue + "\"",
-                  topicValue == null ? null : "\"" + topicValue + "\"",
-                  envValue == null ? null : "\"" + envValue + "\"",
-                  ts);
-              System.out.println(json);
-              producer.send(new ProducerRecord<>("metrics",
-                  String.format("%s-%s-%s-%d", clusterValue, topicValue, envValue, ts),
-                  json));
-            }
-          }
-        }
+        cubeAndProduce(cluster, topic, env, metricName, metricValue, producer, ts);
 
         totalProduced++;
         if (totalProduced % 10000 == 0) {

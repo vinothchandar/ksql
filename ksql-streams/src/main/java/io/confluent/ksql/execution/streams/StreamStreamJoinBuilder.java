@@ -36,6 +36,7 @@ public final class StreamStreamJoinBuilder {
   private StreamStreamJoinBuilder() {
   }
 
+  @SuppressWarnings("deprecation")
   public static <K> KStreamHolder<K> build(
       final KStreamHolder<K> left,
       final KStreamHolder<K> right,

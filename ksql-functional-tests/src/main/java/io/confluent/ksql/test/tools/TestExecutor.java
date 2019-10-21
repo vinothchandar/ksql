@@ -69,6 +69,7 @@ import org.hamcrest.Matcher;
 import org.hamcrest.StringDescription;
 
 // CHECKSTYLE_RULES.OFF: ClassDataAbstractionCoupling
+@SuppressWarnings("deprecation")
 public class TestExecutor implements Closeable {
   // CHECKSTYLE_RULES.ON: ClassDataAbstractionCoupling
 
@@ -314,7 +315,7 @@ public class TestExecutor implements Closeable {
     }
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "deprecation"})
   private static void processSingleRecord(
       final TestCase testCase,
       final StubKafkaRecord inputRecord,
@@ -368,7 +369,7 @@ public class TestExecutor implements Closeable {
     }
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "deprecation"})
   private static void processRecordsForTopic(
       final TestCase testCase,
       final TopologyTestDriver topologyTestDriver,
