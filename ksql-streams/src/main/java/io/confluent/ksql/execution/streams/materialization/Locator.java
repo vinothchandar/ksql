@@ -16,7 +16,7 @@
 package io.confluent.ksql.execution.streams.materialization;
 
 import java.net.URI;
-import java.util.Optional;
+import java.util.List;
 import org.apache.kafka.connect.data.Struct;
 
 /**
@@ -28,16 +28,23 @@ import org.apache.kafka.connect.data.Struct;
 public interface Locator {
 
   /**
-   * Locate which KSQL node stores the supplied {@code key}.
+   * Locate which KSQL node stores the supplied {@code key}. only includes nodes that are currently
+   * considered alive.
    *
-   * <p>Implementations are free to return {@link Optional#empty()} if the location is not known at
-   * this time.
+   * <p>Implementations are free to return an empty list if the location is not known at
+   * this time or all known locations are currently unavailable</p>
    *
    * @param key the required key.
-   * @return the owning node, if known.
+   * @return alive owning nodes, if any, beginning with the node with most recent value.
    */
-  Optional<KsqlNode> locate(Struct key);
+  List<KsqlNode> locate(Struct key);
 
+  /**
+   * Reports a failure to fetch state from a remote node
+   *
+   * @param node node to which proxying failed
+   */
+  void reportFailure(KsqlNode node);
 
   interface KsqlNode {
 

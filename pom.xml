@@ -114,6 +114,7 @@
         <avro.random.generator.version>0.2.2</avro.random.generator.version>
         <apache.curator.version>2.9.0</apache.curator.version>
         <wiremock.version>2.24.0</wiremock.version>
+        <kafka.version>5.5.0-ccs-SNAPSHOT</kafka.version>
     </properties>
 
     <dependencyManagement>
