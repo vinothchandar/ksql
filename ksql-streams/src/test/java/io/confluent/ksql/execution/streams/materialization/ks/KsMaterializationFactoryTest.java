@@ -76,6 +76,10 @@ public class KsMaterializationFactoryTest {
   private KsMaterialization materialization;
   @Mock
   private KsqlConfig ksqlConfig;
+  @Mock
+  private KsAvailabilityRoutingFilter availabilityRoutingFilter;
+  @Mock
+  private KsStalenessRoutingFilter stalenessRoutingFilter;
   private KsMaterializationFactory factory;
   private final Map<String, Object> streamsProperties = new HashMap<>();
 
@@ -87,7 +91,7 @@ public class KsMaterializationFactoryTest {
         materializationFactory
     );
 
-    when(locatorFactory.create(any(), any(), any(), any())).thenReturn(locator);
+    when(locatorFactory.create(any(), any(), any(), any(), any(), any())).thenReturn(locator);
     when(storeFactory.create(any(), any(), any(), any())).thenReturn(stateStore);
     when(materializationFactory.create(any(), any(), any())).thenReturn(materialization);
 
@@ -112,7 +116,7 @@ public class KsMaterializationFactoryTest {
     // When:
     final Optional<KsMaterialization> result = factory
         .create(STORE_NAME, kafkaStreams, SCHEMA, keySerializer, Optional.empty(), streamsProperties,
-            ksqlConfig);
+            ksqlConfig, availabilityRoutingFilter, stalenessRoutingFilter);
 
     // Then:
     assertThat(result, is(Optional.empty()));
@@ -122,14 +126,16 @@ public class KsMaterializationFactoryTest {
   public void shouldBuildLocatorWithCorrectParams() {
     // When:
     factory.create(STORE_NAME, kafkaStreams, SCHEMA, keySerializer, Optional.empty(), streamsProperties,
-        ksqlConfig);
+        ksqlConfig, availabilityRoutingFilter, stalenessRoutingFilter);
 
     // Then:
     verify(locatorFactory).create(
         STORE_NAME,
         kafkaStreams,
         keySerializer,
-        DEFAULT_APP_SERVER
+        DEFAULT_APP_SERVER,
+        availabilityRoutingFilter,
+        stalenessRoutingFilter
     );
   }
 
@@ -137,7 +143,7 @@ public class KsMaterializationFactoryTest {
   public void shouldBuildStateStoreWithCorrectParams() {
     // When:
     factory.create(STORE_NAME, kafkaStreams, SCHEMA, keySerializer, Optional.empty(), streamsProperties,
-        ksqlConfig);
+        ksqlConfig, availabilityRoutingFilter, stalenessRoutingFilter);
 
     // Then:
     verify(storeFactory).create(
@@ -155,7 +161,7 @@ public class KsMaterializationFactoryTest {
 
     // When:
     factory.create(STORE_NAME, kafkaStreams, SCHEMA, keySerializer, windowType, streamsProperties,
-        ksqlConfig);
+        ksqlConfig, availabilityRoutingFilter, stalenessRoutingFilter);
 
     // Then:
     verify(materializationFactory).create(
@@ -170,7 +176,7 @@ public class KsMaterializationFactoryTest {
     // When:
     final Optional<KsMaterialization> result = factory
         .create(STORE_NAME, kafkaStreams, SCHEMA, keySerializer, Optional.empty(), streamsProperties,
-            ksqlConfig);
+            ksqlConfig, availabilityRoutingFilter, stalenessRoutingFilter);
 
     // Then:
     assertThat(result,  is(Optional.of(materialization)));

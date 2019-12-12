@@ -17,14 +17,13 @@ package io.confluent.ksql.execution.streams.materialization.ks;
 
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.collect.Lists;
 import com.google.errorprone.annotations.Immutable;
 import io.confluent.ksql.execution.streams.materialization.Locator;
 import java.net.URI;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.streams.KafkaStreams;
@@ -32,31 +31,26 @@ import org.apache.kafka.streams.KeyQueryMetadata;
 import org.apache.kafka.streams.state.HostInfo;
 
 /**
- * Kafka Streams implementation of {@link Locator}.
+ * Kafka Streams implementation of {@link Locator}, which simply routes to active replicas of the
+ * materialized state. During server rebalances, the state will be unavailable for querying.
  */
-final class KsLocator implements Locator {
+final class KsSimpleLocator implements Locator {
 
   private final String stateStoreName;
   private final KafkaStreams kafkaStreams;
   private final Serializer<Struct> keySerializer;
   private final URL localHost;
-  private final RoutingFilter availabilityFilter;
-  private final RoutingFilter stalenessFilter;
 
-  KsLocator(
+  KsSimpleLocator(
       final String stateStoreName,
       final KafkaStreams kafkaStreams,
       final Serializer<Struct> keySerializer,
-      final URL localHost,
-      final RoutingFilter availabilityFilter,
-      final RoutingFilter stalenessFilter
+      final URL localHost
   ) {
     this.kafkaStreams = requireNonNull(kafkaStreams, "kafkaStreams");
     this.keySerializer = requireNonNull(keySerializer, "keySerializer");
     this.stateStoreName = requireNonNull(stateStoreName, "stateStoreName");
     this.localHost = requireNonNull(localHost, "localHost");
-    this.availabilityFilter = requireNonNull(availabilityFilter, "availabilityFilter");
-    this.stalenessFilter = requireNonNull(stalenessFilter, "stalenessFilter");
   }
 
   @Override
@@ -68,13 +62,8 @@ final class KsLocator implements Locator {
       return Collections.emptyList();
     }
 
-    final List<HostInfo> hostList = Lists.newArrayList();
-    hostList.add(metadata.getActiveHost());
-    hostList.addAll(metadata.getStandbyHosts());
-    return hostList.stream().map(this::asNode)
-        .filter(node -> availabilityFilter.filter(node, stateStoreName, metadata.getPartition()))
-        .filter(node -> stalenessFilter.filter(node, stateStoreName, metadata.getPartition()))
-        .collect(Collectors.toList());
+    final HostInfo hostInfo = metadata.getActiveHost();
+    return Arrays.asList(asNode(hostInfo));
   }
 
   private KsqlNode asNode(final HostInfo hostInfo) {

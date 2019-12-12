@@ -28,11 +28,13 @@ import io.confluent.ksql.execution.streams.materialization.Locator.KsqlNode;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.util.Collections;
 import java.util.Optional;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.KeyQueryMetadata;
 import org.apache.kafka.streams.state.HostInfo;
 import org.apache.kafka.streams.state.StreamsMetadata;
 import org.junit.Before;
@@ -59,7 +61,14 @@ public class KsLocatorTest {
 
   @Before
   public void setUp() {
-    locator = new KsLocator(STORE_NAME, kafkaStreams, keySerializer, LOCAL_HOST_URL);
+    locator = new KsLocator(
+        STORE_NAME,
+        kafkaStreams,
+        keySerializer,
+        LOCAL_HOST_URL,
+        new KsAvailabilityRoutingFilter(),
+        new KsStalenessRoutingFilter()
+    );
 
     givenOwnerMetadata(Optional.empty());
 
@@ -82,7 +91,7 @@ public class KsLocatorTest {
     locator.locate(SOME_KEY);
 
     // Then:
-    verify(kafkaStreams).metadataForKey(STORE_NAME, SOME_KEY, keySerializer);
+    verify(kafkaStreams).queryMetadataForKey(STORE_NAME, SOME_KEY, keySerializer);
   }
 
   @Test
@@ -91,7 +100,7 @@ public class KsLocatorTest {
     givenOwnerMetadata(Optional.empty());
 
     // When:
-    final Optional<KsqlNode> result = locator.locate(SOME_KEY);
+    final Optional<KsqlNode> result = locator.locate(SOME_KEY).stream().findFirst();
 
     // Then:
     assertThat(result, is(Optional.empty()));
@@ -103,7 +112,7 @@ public class KsLocatorTest {
     givenOwnerMetadata(Optional.of(hostInfo));
 
     // When:
-    final Optional<KsqlNode> result = locator.locate(SOME_KEY);
+    final Optional<KsqlNode> result = locator.locate(SOME_KEY).stream().findFirst();
 
     // Then:
     final Optional<URI> url = result.map(KsqlNode::location);
@@ -121,7 +130,7 @@ public class KsLocatorTest {
     givenOwnerMetadata(Optional.of(hostInfo));
 
     // When:
-    final Optional<KsqlNode> result = locator.locate(SOME_KEY);
+    final Optional<KsqlNode> result = locator.locate(SOME_KEY).stream().findFirst();
 
     // Then:
     assertThat(result.map(KsqlNode::isLocal), is(Optional.of(true)));
@@ -135,7 +144,7 @@ public class KsLocatorTest {
     givenOwnerMetadata(Optional.of(hostInfo));
 
     // When:
-    final Optional<KsqlNode> result = locator.locate(SOME_KEY);
+    final Optional<KsqlNode> result = locator.locate(SOME_KEY).stream().findFirst();
 
     // Then:
     assertThat(result.map(KsqlNode::isLocal), is(Optional.of(true)));
@@ -149,7 +158,7 @@ public class KsLocatorTest {
     givenOwnerMetadata(Optional.of(hostInfo));
 
     // When:
-    final Optional<KsqlNode> result = locator.locate(SOME_KEY);
+    final Optional<KsqlNode> result = locator.locate(SOME_KEY).stream().findFirst();
 
     // Then:
     assertThat(result.map(KsqlNode::isLocal), is(Optional.of(false)));
@@ -163,7 +172,7 @@ public class KsLocatorTest {
     givenOwnerMetadata(Optional.of(hostInfo));
 
     // When:
-    final Optional<KsqlNode> result = locator.locate(SOME_KEY);
+    final Optional<KsqlNode> result = locator.locate(SOME_KEY).stream().findFirst();
 
     // Then:
     assertThat(result.map(KsqlNode::isLocal), is(Optional.of(false)));
@@ -177,7 +186,7 @@ public class KsLocatorTest {
     givenOwnerMetadata(Optional.of(hostInfo));
 
     // When:
-    final Optional<KsqlNode> result = locator.locate(SOME_KEY);
+    final Optional<KsqlNode> result = locator.locate(SOME_KEY).stream().findFirst();
 
     // Then:
     assertThat(result.map(KsqlNode::isLocal), is(Optional.of(false)));
@@ -185,15 +194,15 @@ public class KsLocatorTest {
 
   @SuppressWarnings("unchecked")
   private void givenOwnerMetadata(final Optional<HostInfo> hostInfo) {
-    final StreamsMetadata metadata = hostInfo
+    final KeyQueryMetadata metadata = hostInfo
         .map(hi -> {
-          final StreamsMetadata md = mock(StreamsMetadata.class);
-          when(md.hostInfo()).thenReturn(hostInfo.get());
-          return md;
+          final KeyQueryMetadata kmd = mock(KeyQueryMetadata.class);
+          when(kmd.getActiveHost()).thenReturn(hostInfo.get());
+          return kmd;
         })
-        .orElse(StreamsMetadata.NOT_AVAILABLE);
+        .orElse(KeyQueryMetadata.NOT_AVAILABLE);
 
-    when(kafkaStreams.metadataForKey(any(), any(), any(Serializer.class)))
+    when(kafkaStreams.queryMetadataForKey(any(), any(), any(Serializer.class)))
         .thenReturn(metadata);
   }
 

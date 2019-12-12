@@ -16,6 +16,7 @@
 package io.confluent.ksql.execution.streams.materialization;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Optional;
 import org.apache.kafka.connect.data.Struct;
 
@@ -34,9 +35,9 @@ public interface Locator {
    * this time.
    *
    * @param key the required key.
-   * @return the owning node, if known.
+   * @return the list of nodes, that can potentially serve the key.
    */
-  Optional<KsqlNode> locate(Struct key);
+  List<KsqlNode> locate(Struct key);
 
 
   interface KsqlNode {
@@ -50,5 +51,12 @@ public interface Locator {
      * @return The base URI of the node, including protocol, host and port.
      */
     URI location();
+  }
+
+  /**
+   * Determines if a particular host should be allowed to serve a store partition
+   */
+  interface RoutingFilter {
+    boolean filter(KsqlNode node, String storeName, int partition);
   }
 }

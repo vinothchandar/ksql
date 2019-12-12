@@ -27,8 +27,10 @@ import io.confluent.ksql.execution.plan.PlanBuilder;
 import io.confluent.ksql.execution.streams.KSPlanBuilder;
 import io.confluent.ksql.execution.streams.materialization.KsqlMaterializationFactory;
 import io.confluent.ksql.execution.streams.materialization.MaterializationProvider;
+import io.confluent.ksql.execution.streams.materialization.ks.KsAvailabilityRoutingFilter;
 import io.confluent.ksql.execution.streams.materialization.ks.KsMaterialization;
 import io.confluent.ksql.execution.streams.materialization.ks.KsMaterializationFactory;
+import io.confluent.ksql.execution.streams.materialization.ks.KsStalenessRoutingFilter;
 import io.confluent.ksql.function.FunctionRegistry;
 import io.confluent.ksql.logging.processing.NoopProcessingLogContext;
 import io.confluent.ksql.logging.processing.ProcessingLogContext;
@@ -365,7 +367,9 @@ public final class QueryExecutor {
             keySerializer,
             keyFormat.getWindowType(),
             streamsProperties,
-            ksqlConfig
+            ksqlConfig,
+            new KsAvailabilityRoutingFilter(),
+            new KsStalenessRoutingFilter()
         );
 
     return ksMaterialization.map(ksMat -> (queryId, contextStacker) -> ksqlMaterializationFactory

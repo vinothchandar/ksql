@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.confluent.ksql.execution.streams.materialization.Locator;
+import io.confluent.ksql.execution.streams.materialization.Locator.RoutingFilter;
 import io.confluent.ksql.model.WindowType;
 import io.confluent.ksql.schema.ksql.LogicalSchema;
 import io.confluent.ksql.util.KsqlConfig;
@@ -76,7 +77,9 @@ public final class KsMaterializationFactory {
       final Serializer<Struct> keySerializer,
       final Optional<WindowType> windowType,
       final Map<String, ?> streamsProperties,
-      final KsqlConfig ksqlConfig
+      final KsqlConfig ksqlConfig,
+      final KsAvailabilityRoutingFilter availabilityRoutingFilter,
+      final KsStalenessRoutingFilter stalenessRoutingFilter
   ) {
     final Object appServer = streamsProperties.get(StreamsConfig.APPLICATION_SERVER_CONFIG);
     if (appServer == null) {
@@ -89,7 +92,9 @@ public final class KsMaterializationFactory {
         stateStoreName,
         kafkaStreams,
         keySerializer,
-        localHost
+        localHost,
+        availabilityRoutingFilter,
+        stalenessRoutingFilter
     );
 
     final KsStateStore stateStore = storeFactory.create(
@@ -127,7 +132,9 @@ public final class KsMaterializationFactory {
         String stateStoreName,
         KafkaStreams kafkaStreams,
         Serializer<Struct> keySerializer,
-        URL localHost
+        URL localHost,
+        RoutingFilter availabilityFilter,
+        RoutingFilter stalenessFilter
     );
   }
 
